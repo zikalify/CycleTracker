@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Symphony - Natural Family Planning</title>
+    <meta name="theme-color" content="#fcfaf8">
+    <meta name="description" content="A natural family planning tracker combining Symptothermal methods.">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Symphony</h1>
+            <p>Cycle Tracker</p>
+        </div>
+        <div class="calendar-nav">
+            <button id="prevBtn" aria-label="Previous Day">&lt;</button>
+            <h2 id="currentDateDisplay">Today</h2>
+            <button id="nextBtn" aria-label="Next Day" disabled>&gt;</button>
+        </div>
+    </header>
+
+    <main>
+        <section id="insightCard" class="card insight-card">
+            <div class="insight-header">
+                <div class="fertility-indicator" id="fertilityIndicator"></div>
+                <h3 id="fertilityStatus">Loading Insight...</h3>
+            </div>
+            <p id="insightMessage">Analyzing your cycle data.</p>
+        </section>
+
+        <section class="card form-card">
+            <h3>Daily Log</h3>
+            <form id="dailyForm">
+                <div class="form-group">
+                    <label>Period / Bleeding</label>
+                    <div class="btn-group" id="bleedingGroup">
+                        <button type="button" class="option-btn active" data-value="none">None</button>
+                        <button type="button" class="option-btn" data-value="spotting">Spotting</button>
+                        <button type="button" class="option-btn" data-value="light">Light</button>
+                        <button type="button" class="option-btn" data-value="medium">Medium</button>
+                        <button type="button" class="option-btn" data-value="heavy">Heavy</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="bbtInput">Basal Body Temperature (BBT) °C</label>
+                    <input type="number" id="bbtInput" step="0.01" min="35.00" max="40.00" placeholder="e.g. 36.50">
+                </div>
+
+                <div class="form-group">
+                    <label>Cervical Mucus</label>
+                    <div class="btn-group" id="mucusGroup">
+                        <button type="button" class="option-btn active" data-value="none">None / Dry</button>
+                        <button type="button" class="option-btn" data-value="sticky">Sticky / Tacky</button>
+                        <button type="button" class="option-btn" data-value="creamy">Creamy</button>
+                        <button type="button" class="option-btn" data-value="watery">Watery / Clear</button>
+                        <button type="button" class="option-btn" data-value="eggwhite">Egg White (Stretchy)</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="save-btn">Save Entry</button>
+            </form>
+        </section>
+        
+        <section class="card stats-card">
+            <h3>Cycle Overview</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label">Cycle Day</span>
+                    <span class="stat-value" id="cycleDayDisplay">-</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Phase</span>
+                    <span class="stat-value" id="cyclePhaseDisplay">-</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast">Saved Successfully</div>
+
+    <script src="app.js"></script>
+</body>
+</html>

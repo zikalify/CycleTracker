@@ -1,0 +1,16 @@
+{
+  "name": "Symphony Natural Family Planning",
+  "short_name": "Symphony",
+  "description": "Natural Family Planning and Cycle Tracker using the Symptothermal method.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fcfaf8",
+  "theme_color": "#d4a373",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
