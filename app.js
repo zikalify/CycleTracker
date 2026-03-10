@@ -328,6 +328,13 @@ const hasTempData = recentTemps.length > 0;
         color = "var(--fertile-low)";
         const days = daysSince(lastSlipperyKey);
         message = `Ovulation likely occurred ${days} day${days > 1 ? 's' : ''} ago. Fertility is now low.`;
+    } else if (lastSlipperyKey && daysSince(lastSlipperyKey) > 2 && recentTemps.length === 0) {
+        // New fallback: no temperature data at all
+        phase = "Luteal Phase";
+        statusText = "Post-Ovulation (no temp data)";
+        color = "var(--fertile-low)";
+        const days = daysSince(lastSlipperyKey);
+        message = `Ovulation likely occurred ${days} day${days > 1 ? 's' : ''} ago. No temperature data was recorded.`;
     } else {
         phase = "Follicular Phase";
         statusText = "Pre-Ovulatory";
