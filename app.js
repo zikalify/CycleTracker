@@ -26,6 +26,8 @@ const fertilityIndicator = document.getElementById('fertilityIndicator');
 const cycleDayDisplay = document.getElementById('cycleDayDisplay');
 const cyclePhaseDisplay = document.getElementById('cyclePhaseDisplay');
 const toast = document.getElementById('toast');
+const exportBtn = document.getElementById('exportBtn');
+const importInput = document.getElementById('importInput');
 
 // --- Initialization ---
 function init() {
@@ -37,8 +39,10 @@ function init() {
 
 function formatDateKey(date) {
     const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function getTodayKey() {
@@ -81,6 +85,13 @@ function setupEventListeners() {
         e.preventDefault();
         saveDailyData();
     });
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportData);
+    }
+    if (importInput) {
+        importInput.addEventListener('change', importData);
+    }
 }
 
 function setupButtonGroup(groupElement) {
@@ -136,10 +147,25 @@ function getButtonGroupValue(groupElement) {
 function saveDailyData() {
     const key = formatDateKey(currentDate);
     
+    const bleedingVal = getButtonGroupValue(bleedingGroup);
+    const mucusVal = getButtonGroupValue(mucusGroup);
+    let bbtVal = parseFloat(bbtInput.value);
+    
+    if (isNaN(bbtVal)) {
+        bbtVal = null;
+    } else if (bbtVal < 35.0 || bbtVal > 40.0) {
+        showToast('Invalid BBT. Must be between 35 and 40°C.');
+        return; // Reject invalid BBT
+    }
+
+    // Validate enums to prevent garbage data
+    const validBleeding = ['none', 'spotting', 'light', 'medium', 'heavy'];
+    const validMucus = ['none', 'sticky', 'creamy', 'watery', 'eggwhite'];
+    
     cycleData[key] = {
-        bleeding: getButtonGroupValue(bleedingGroup),
-        mucus: getButtonGroupValue(mucusGroup),
-        bbt: parseFloat(bbtInput.value) || null
+        bleeding: validBleeding.includes(bleedingVal) ? bleedingVal : 'none',
+        mucus: validMucus.includes(mucusVal) ? mucusVal : 'none',
+        bbt: bbtVal
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cycleData));
@@ -164,38 +190,37 @@ function analyzeCycle() {
         return;
     }
 
-    // 1. Find the start of the current cycle (most recent period start)
+    const currentKey = formatDateKey(currentDate);
+    const validDates = sortedDates.filter(d => d <= currentKey);
+
+    if (validDates.length === 0) {
+        setInsight("No Past Data", "No history available prior to this date.", "var(--unknown)", "-", "-");
+        return;
+    }
+
+    // 1. Find the start of the current cycle (most recent period start relative to the viewed date)
     let cycleStartKey = null;
     let isPeriodContext = false;
     
-    // Iterate backwards to find the start of the most recent period bleeding block
-    // Full bleeding (light, medium, heavy) starts a cycle. Spotting does not usually start a cycle unless it flows into full.
-    for (let i = sortedDates.length - 1; i >= 0; i--) {
-        const dateKey = sortedDates[i];
+    // Iterate backwards through valid dates. Full bleeding (light, medium, heavy) starts a cycle.
+    for (let i = validDates.length - 1; i >= 0; i--) {
+        const dateKey = validDates[i];
         const data = cycleData[dateKey];
-        const isBleedingDay = ['light', 'medium', 'heavy'].includes(data.bleeding);
+        const isFullBleeding = ['light', 'medium', 'heavy'].includes(data.bleeding);
+        const isSpotting = data.bleeding === 'spotting';
         
-        if (isBleedingDay) {
+        if (isFullBleeding) {
             isPeriodContext = true;
             cycleStartKey = dateKey; // Keep shifting backwards while bleeding is contiguous to find day 1
+        } else if (isSpotting && isPeriodContext) {
+            break; // Spotting typically doesn't count as contiguous full flow Day 1
         } else if (isPeriodContext) {
-            // We stepped back into a non-bleeding day, so the cycle start was the last date we checked
-            // Actually, we need contiguous bleeding. If we hit none, we break.
             break; 
         }
     }
 
-    if (!cycleStartKey) {
-        // No period logged ever, default to earliest date as cycle day 1 for now
-        cycleStartKey = sortedDates[0];
-    }
-
-    const currentKey = formatDateKey(currentDate);
-    
-    // Only analyze if the selected date is ON or AFTER the cycle start
-    if (currentKey < cycleStartKey) {
-        setInsight("Past Cycle", "Viewing history prior to current cycle.", "var(--unknown)", "-", "-");
-        return;
+    if (!cycleStartKey && validDates.length > 0) {
+        cycleStartKey = validDates[0];
     }
 
     // Calculate Cycle Day
@@ -235,17 +260,17 @@ function analyzeCycle() {
         phase = "Luteal Phase";
         statusText = "Low Fertility";
         color = "var(--fertile-low)";
-        message = `Post-Ovulation: Temperature shift detected. Fertility is highly unlikely.`;
+        message = `Post-Ovulation: Temperature shift detected. Probability of fertility is very low.`;
     } else if (isHighlyFertile) {
         phase = "Follicular Phase";
-        statusText = "High Fertility";
+        statusText = "High Fertility (Peak)";
         color = "var(--fertile-high)";
-        message = `Approaching Ovulation: Peak-type mucus detected. This is your most fertile window.`;
+        message = `Approaching Ovulation: Peak-type mucus detected. High probability of fertility.`;
     } else if (isPotentiallyFertile) {
         phase = "Follicular Phase";
         statusText = "Potentially Fertile";
         color = "var(--fertile-high)";
-        message = `Fertile Window Opening: Non-peak mucus detected. Sperm can survive in this environment.`;
+        message = `Fertile Window Opening: Non-peak mucus detected. Moderate probability of fertility.`;
     } else {
         phase = "Follicular Phase";
         statusText = "Pre-Ovulatory";
@@ -256,28 +281,27 @@ function analyzeCycle() {
     setInsight(statusText, message, color, cycleDay, phase);
 }
 
-// 3-over-6 rule: 3 days of temps >= 0.2C above the highest of the previous 6 days
+// 3-over-6 rule: 3 days of temps >= 0.2C above the highest of the previous 6 days, tolerant of missing days
 function checkBBTShift(dates) {
-    if (dates.length < 9) return false; // Need at least 9 days for the rule
-
-    // Look at the last 3 days
-    const last3Dates = dates.slice(-3);
-    const last3Temps = last3Dates.map(d => cycleData[d].bbt).filter(t => t !== null && !isNaN(t));
+    const recentDates = dates.slice(-14);
+    const validTemps = recentDates.map(d => ({ date: d, temp: cycleData[d].bbt })).filter(item => item.temp !== null && !isNaN(item.temp));
     
-    if (last3Temps.length < 3) return false;
+    if (validTemps.length < 9) return false;
 
-    // Look at the 6 days before those 3
-    const prev6Dates = dates.slice(-9, -3);
-    const prev6Temps = prev6Dates.map(d => cycleData[d].bbt).filter(t => t !== null && !isNaN(t));
+    // Look at the last 3 valid temps
+    const last3 = validTemps.slice(-3);
+    const prev6 = validTemps.slice(-9, -3);
 
-    if (prev6Temps.length < 6) return false; // Missing data for strict rule
-
-    const highestPrev6 = Math.max(...prev6Temps);
+    const highestPrev6 = Math.max(...prev6.map(item => item.temp));
     const threshold = highestPrev6 + 0.2;
 
-    // Are all of the last 3 temps strictly >= the threshold?
-    const isShiftConfirmed = last3Temps.every(t => t >= threshold);
+    const isShiftConfirmed = last3.every(item => item.temp >= threshold);
     
+    // Realism check: ensure shift is reasonable (e.g., max difference not > 2.0C to avoid garbage data)
+    const lowestPrev6 = Math.min(...prev6.map(item => item.temp));
+    const highestLast3 = Math.max(...last3.map(item => item.temp));
+    if (highestLast3 - lowestPrev6 > 2.0) return false; // Likely invalid data (e.g. fever or typo)
+
     return isShiftConfirmed;
 }
 
@@ -291,6 +315,45 @@ function setInsight(statusLabel, message, colorCode, dayLabel, phaseLabel) {
     
     cycleDayDisplay.textContent = dayLabel;
     cyclePhaseDisplay.textContent = phaseLabel;
+}
+
+// --- Data Export/Import ---
+function exportData() {
+    const dataStr = JSON.stringify(cycleData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `symphony_backup_${getTodayKey()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            if (typeof importedData === 'object' && importedData !== null) {
+                cycleData = importedData;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cycleData));
+                showToast('Data Imported Successfully!');
+                handleDateChange();
+            } else {
+                showToast('Invalid backup file format.');
+            }
+        } catch (err) {
+            showToast('Error reading backup file.');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
 }
 
 // Boot up

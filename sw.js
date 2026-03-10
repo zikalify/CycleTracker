@@ -1,4 +1,4 @@
-const CACHE_NAME = 'symphony-v1';
+const CACHE_NAME = 'symphony-v2';
 const ASSETS = [
     './',
     './index.html',
@@ -29,15 +29,20 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Basic network-first strategy for index and JS to ensure updates, fallback to cache
+    // Stale-while-revalidate strategy to serve quickly and update cache in background
     event.respondWith(
-        fetch(event.request).then(response => {
-            return caches.open(CACHE_NAME).then(cache => {
-                if(event.request.method === 'GET') {
-                    cache.put(event.request, response.clone());
+        caches.match(event.request).then(cachedResponse => {
+            const fetchPromise = fetch(event.request).then(networkResponse => {
+                if (event.request.method === 'GET') {
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, networkResponse.clone());
+                    });
                 }
-                return response;
+                return networkResponse;
+            }).catch(() => {
+                // Ignore network errors, returning stale cache if available
             });
-        }).catch(() => caches.match(event.request))
+            return cachedResponse || fetchPromise;
+        })
     );
 });

@@ -62,3 +62,29 @@ main { padding: 0 1.5rem; max-width: 600px; margin: 0 auto; display: flex; flex-
 
 .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: #343a40; color: white; padding: 0.8rem 1.5rem; border-radius: 30px; font-size: 0.9rem; font-weight: 500; opacity: 0; transition: var(--transition); z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); pointer-events: none; }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+.settings-card { margin-top: 0.5rem; }
+.settings-actions { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+.setting-btn { flex: 1; padding: 0.8rem; background: var(--bg-color); border: 1px solid var(--border); border-radius: 10px; font-size: 0.9rem; cursor: pointer; transition: var(--transition); color: var(--text-main); text-align: center; font-weight: 500; }
+.setting-btn:hover { background: var(--primary-light); border-color: var(--primary); color: var(--text-main); }
+.disclaimer-block { background: rgba(226, 149, 120, 0.1); border-left: 4px solid var(--period); padding: 1rem; border-radius: 8px; font-size: 0.85rem; color: var(--text-main); line-height: 1.5; }
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-color: #121212;
+        --card-bg: #1e1e1e;
+        --primary: #d4a373;
+        --primary-light: #2c2111;
+        --text-main: #e0e0e0;
+        --text-muted: #a0a0a0;
+        --border: #333333;
+        
+        --fertile-high: #3a7a73;
+        --fertile-low: #805c4d;
+        --period: #8c4e36;
+        --unknown: #333333;
+        
+        --shadow: 0 4px 24px rgba(0,0,0,0.2);
+        --shadow-hover: 0 8px 32px rgba(0,0,0,0.3);
+    }
+}
