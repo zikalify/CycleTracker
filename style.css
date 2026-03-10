@@ -64,10 +64,7 @@ main { padding: 0 1.5rem; max-width: 600px; margin: 0 auto; display: flex; flex-
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
 .settings-card { margin-top: 0.5rem; }
-.settings-actions { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
-.setting-btn { flex: 1; padding: 0.8rem; background: var(--bg-color); border: 1px solid var(--border); border-radius: 10px; font-size: 0.9rem; cursor: pointer; transition: var(--transition); color: var(--text-main); text-align: center; font-weight: 500; }
-.setting-btn:hover { background: var(--primary-light); border-color: var(--primary); color: var(--text-main); }
-.disclaimer-block { background: rgba(226, 149, 120, 0.1); border-left: 4px solid var(--period); padding: 1rem; border-radius: 8px; font-size: 0.85rem; color: var(--text-main); line-height: 1.5; }
+.settings-actions { display: flex; gap: 1rem; }
 
 @media (prefers-color-scheme: dark) {
     :root {
