@@ -241,24 +241,23 @@ function analyzeCycle() {
         }
     }
 
-    if (!cycleStartKey) {
-        setInsight("No Cycle Logged", "Track the first day of your period to start cycle calculations.", "var(--unknown)", "-", "-");
-        return;
-    }
-
-    // Calculate Cycle Day
-    const startMs = new Date(cycleStartKey).getTime();
     const currentMs = new Date(currentKey).getTime();
-    const cycleDay = Math.floor((currentMs - startMs) / (1000 * 60 * 60 * 24)) + 1;
+    let cycleDay = "-";
+    let datesUpToCurrent = [];
+
+    if (cycleStartKey) {
+        const startMs = new Date(cycleStartKey).getTime();
+        cycleDay = Math.floor((currentMs - startMs) / (1000 * 60 * 60 * 24)) + 1;
+        datesUpToCurrent = sortedDates.filter(d => d >= cycleStartKey && d <= currentKey);
+    } else {
+        datesUpToCurrent = sortedDates.filter(d => d <= currentKey);
+    }
 
     // Helper: days since a given date key relative to the current view date
     function daysSince(dateKey) {
         const ms = new Date(dateKey).getTime();
         return Math.floor((currentMs - ms) / (1000 * 60 * 60 * 24));
     }
-
-    // Get Data up to current viewer date
-    const datesUpToCurrent = sortedDates.filter(d => d >= cycleStartKey && d <= currentKey);
     const todayData = cycleData[currentKey] || { bleeding: 'none', mucus: 'none' };
     
     let isHighlyFertile = false;
@@ -339,7 +338,11 @@ const hasTempData = recentTemps.length > 0;
         phase = "Follicular Phase";
         statusText = "Pre-Ovulatory";
         color = "var(--unknown)";
-        message = `Cycle Day ${cycleDay}: Keep tracking daily routines to detect your fertile window opening.`;
+        if (cycleDay !== "-") {
+            message = `Cycle Day ${cycleDay}: Keep tracking daily routines to detect your fertile window opening.`;
+        } else {
+            message = `Keep tracking daily routines to detect your fertile window opening.`;
+        }
         if (todayData.mucus === 'unknown') {
             message += " Missing mucus data - accuracy may be reduced.";
         }
