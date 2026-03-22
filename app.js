@@ -9,7 +9,7 @@ if ('serviceWorker' in navigator) {
 
 // --- State Management ---
 let currentDate = new Date();
-const STORAGE_KEY = 'symphony_nfp_data';
+const STORAGE_KEY = 'cycletracker_nfp_data';
 let cycleData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
 
 // --- DOM Elements ---
@@ -395,7 +395,7 @@ function exportData() {
     
     const a = document.createElement('a');
     a.href = url;
-    a.download = `symphony_backup_${getTodayKey()}.json`;
+    a.download = `cycletracker_backup_${getTodayKey()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
