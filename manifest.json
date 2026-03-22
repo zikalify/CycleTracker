@@ -1,6 +1,6 @@
 {
-  "name": "Symphony Natural Family Planning",
-  "short_name": "Symphony",
+  "name": "Cycle Tracker - Natural Family Planning",
+  "short_name": "Cycle Tracker",
   "description": "Natural Family Planning and Cycle Tracker using the Symptothermal method.",
   "start_url": "./index.html",
   "display": "standalone",
