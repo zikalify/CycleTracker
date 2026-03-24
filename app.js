@@ -52,7 +52,7 @@ function getTodayKey() {
 function updateDateDisplay() {
     const key = formatDateKey(currentDate);
     const todayKey = getTodayKey();
-    
+
     if (key === todayKey) {
         currentDateDisplay.textContent = 'Today';
         nextBtn.disabled = true;
@@ -119,7 +119,7 @@ function loadDailyData() {
 
     // Set Bleeding
     setButtonGroupValue(bleedingGroup, data.bleeding);
-    
+
     // Set Mucus
     setButtonGroupValue(mucusGroup, data.mucus);
 
@@ -160,11 +160,11 @@ function migrateMucusValue(value) {
 
 function saveDailyData() {
     const key = formatDateKey(currentDate);
-    
+
     const bleedingVal = getButtonGroupValue(bleedingGroup);
     const mucusVal = getButtonGroupValue(mucusGroup);
     let bbtVal = parseFloat(bbtInput.value);
-    
+
     if (isNaN(bbtVal)) {
         bbtVal = null;
     } else if (bbtVal < 35.0 || bbtVal > 40.0) {
@@ -175,24 +175,27 @@ function saveDailyData() {
     // Validate enums to prevent garbage data
     const validBleeding = ['unknown', 'none', 'spotting', 'light', 'medium', 'heavy'];
     const validMucus = ['unknown', 'dry', 'damp', 'slippery'];
-    
+
     const bleeding = validBleeding.includes(bleedingVal) ? bleedingVal : 'unknown';
     const mucus = validMucus.includes(mucusVal) ? mucusVal : 'unknown';
 
-    // If all data is empty/none or unknown, delete the entry entirely so it doesn't affect cycle starts
-    const isBleedingEmpty = bleeding === 'none' || bleeding === 'unknown';
-    const isMucusEmpty = mucus === 'dry' || mucus === 'unknown';
+    // Only delete the entry if it's completely "Unknown" and no BBT.
+    // "None" (bleeding) and "Dry" (mucus) are valid observations that should be saved.
+    const isBleedingUnknown = bleeding === 'unknown';
+    const isMucusUnknown = mucus === 'unknown';
 
-    if (isBleedingEmpty && isMucusEmpty && bbtVal === null) {
-        delete cycleData[key];
-        showToast('Entry Cleared');
+    if (isBleedingUnknown && isMucusUnknown && bbtVal === null) {
+        if (cycleData[key]) {
+            delete cycleData[key];
+            showToast('Entry Cleared');
+        }
     } else {
         cycleData[key] = { bleeding, mucus, bbt: bbtVal };
         showToast('Entry Saved!');
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cycleData));
-    
+
     analyzeCycle(); // Re-analyze after saving
 }
 
@@ -223,21 +226,21 @@ function analyzeCycle() {
     // 1. Find the start of the current cycle (most recent period start relative to the viewed date)
     let cycleStartKey = null;
     let isPeriodContext = false;
-    
+
     // Iterate backwards through valid dates. Full bleeding (light, medium, heavy) starts a cycle.
     for (let i = validDates.length - 1; i >= 0; i--) {
         const dateKey = validDates[i];
         const data = cycleData[dateKey];
         const isFullBleeding = ['light', 'medium', 'heavy'].includes(data.bleeding);
         const isSpotting = data.bleeding === 'spotting';
-        
+
         if (isFullBleeding) {
             isPeriodContext = true;
             cycleStartKey = dateKey; // Keep shifting backwards while bleeding is contiguous to find day 1
         } else if (isSpotting && isPeriodContext) {
             break; // Spotting typically doesn't count as contiguous full flow Day 1
         } else if (isPeriodContext) {
-            break; 
+            break;
         }
     }
 
@@ -258,14 +261,16 @@ function analyzeCycle() {
         const ms = new Date(dateKey).getTime();
         return Math.floor((currentMs - ms) / (1000 * 60 * 60 * 24));
     }
-    const todayData = cycleData[currentKey] || { bleeding: 'none', mucus: 'none' };
-    
+    // Default todayData: Bleeding 'none' is a safe assumption for display for blank days, BUT
+    // we use 'unknown' here to detect if the user has actually interacted with the day.
+    const todayData = cycleData[currentKey] || { bleeding: 'unknown', mucus: 'unknown' };
+
     let isHighlyFertile = false;
     let isPotentiallyFertile = false;
     let ovulationConfirmed = checkBBTShift(datesUpToCurrent);
-const recentTemps = datesUpToCurrent.map(d => cycleData[d].bbt).filter(t => t !== null && !isNaN(t));
-const hasTempData = recentTemps.length > 0;
-    
+    const recentTemps = datesUpToCurrent.map(d => cycleData[d].bbt).filter(t => t !== null && !isNaN(t));
+    const hasTempData = recentTemps.length > 0;
+
     // Lookback logic: Check for fertile mucus in the last 3 days
     let lastSlipperyKey = null;
     let lastDampKey = null;
@@ -281,7 +286,7 @@ const hasTempData = recentTemps.length > 0;
         const diffDays = Math.floor((currentMs - lastMs) / (1000 * 60 * 60 * 24));
         if (diffDays <= 3) isHighlyFertile = true;
     }
-    
+
     if (!isHighlyFertile && lastDampKey) {
         const lastMs = new Date(lastDampKey).getTime();
         const diffDays = Math.floor((currentMs - lastMs) / (1000 * 60 * 60 * 24));
@@ -343,8 +348,11 @@ const hasTempData = recentTemps.length > 0;
         } else {
             message = `Keep tracking daily routines to detect your fertile window opening.`;
         }
-        if (todayData.mucus === 'unknown') {
+        if (todayData.bleeding === 'none' && todayData.mucus === 'unknown') {
             message += " Missing mucus data - accuracy may be reduced.";
+        }
+        if (todayData.mucus === 'dry') {
+            message += " Low fertility is only assumed during the evening hours, provided no mucus was detected during any point of the day.";
         }
     }
 
@@ -355,7 +363,7 @@ const hasTempData = recentTemps.length > 0;
 function checkBBTShift(dates) {
     const recentDates = dates.slice(-14);
     const validTemps = recentDates.map(d => ({ date: d, temp: cycleData[d].bbt })).filter(item => item.temp !== null && !isNaN(item.temp));
-    
+
     if (validTemps.length < 9) return false;
 
     // Look at the last 3 valid temps
@@ -366,7 +374,7 @@ function checkBBTShift(dates) {
     const threshold = highestPrev6 + 0.2;
 
     const isShiftConfirmed = last3.every(item => item.temp >= threshold);
-    
+
     // Realism check: ensure shift is reasonable (e.g., max difference not > 2.0C to avoid garbage data)
     const lowestPrev6 = Math.min(...prev6.map(item => item.temp));
     const highestLast3 = Math.max(...last3.map(item => item.temp));
@@ -379,10 +387,10 @@ function setInsight(statusLabel, message, colorCode, dayLabel, phaseLabel) {
     fertilityStatus.textContent = statusLabel;
     insightMessage.textContent = message;
     fertilityIndicator.style.backgroundColor = colorCode;
-    
+
     // The visual border of the card
     document.getElementById('insightCard').style.borderTopColor = colorCode;
-    
+
     cycleDayDisplay.textContent = dayLabel;
     cyclePhaseDisplay.textContent = phaseLabel;
 }
@@ -392,7 +400,7 @@ function exportData() {
     const dataStr = JSON.stringify(cycleData, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = `cycletracker_backup_${getTodayKey()}.json`;
