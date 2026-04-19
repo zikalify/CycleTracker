@@ -301,58 +301,55 @@ function analyzeCycle() {
 
     const isBleeding = ['light', 'medium', 'heavy', 'spotting'].includes(todayData.bleeding);
 
-    if (isBleeding && cycleDay <= 7) {
-        phase = "Menstruation";
-        statusText = "Period";
-        color = "var(--period)";
-        message = `Menstruation phase. Fertility is typically low, but assume potential fertility if your cycles are short.`;
-    } else if (ovulationConfirmed) {
-        phase = "Luteal Phase";
-        statusText = "Low Fertility";
-        color = "var(--fertile-low)";
-        message = `Post-Ovulation: Temperature shift detected. Probability of fertility is very low.`;
-    } else if (isHighlyFertile) {
-        phase = "Follicular Phase";
+    if (isHighlyFertile) {
+        phase = cycleStartKey ? "Follicular Phase" : "Unknown Phase";
         statusText = "High Fertility (Peak)";
         color = "var(--fertile-high)";
-        message = `Approaching Ovulation: Peak-type mucus detected. High probability of fertility.`;
+        message = `High probability of fertility: Peak-type mucus detected (or within 3-day count).`;
     } else if (isPotentiallyFertile) {
-        phase = "Follicular Phase";
+        phase = cycleStartKey ? "Follicular Phase" : "Unknown Phase";
         statusText = "Potentially Fertile";
         color = "var(--fertile-high)";
-        message = `Fertile Window Opening: Non-peak mucus detected. Moderate probability of fertility.`;
-    } else if (lastSlipperyKey && daysSince(lastSlipperyKey) > 2 && recentTemps.length >= 3) {
-        // Fallback: peak mucus was seen >2 days ago, temperature data exists but no shift → assume luteal phase
+        message = `Moderate probability of fertility: Non-peak mucus detected (or within 3-day count).`;
+    } else if (ovulationConfirmed) {
         phase = "Luteal Phase";
-        if (hasTempData) {
-            statusText = "Post-Ovulation (insufficient temperature rise)";
-        } else {
-            statusText = "Post-Ovulation (no temp data)";
-        }
+        statusText = "Low Fertility (Post-Ovulation)";
         color = "var(--fertile-low)";
-        const days = daysSince(lastSlipperyKey);
-        message = `Ovulation likely occurred ${days} day${days > 1 ? 's' : ''} ago. Fertility is now low.`;
-    } else if (lastSlipperyKey && daysSince(lastSlipperyKey) > 2 && recentTemps.length === 0) {
-        // New fallback: no temperature data at all
-        phase = "Luteal Phase";
-        statusText = "Post-Ovulation (no temp data)";
-        color = "var(--fertile-low)";
-        const days = daysSince(lastSlipperyKey);
-        message = `Ovulation likely occurred ${days} day${days > 1 ? 's' : ''} ago. No temperature data was recorded.`;
-    } else {
+        message = `Probability of fertility is very low: Temperature shift and mucus dry-up confirmed.`;
+    } else if (isBleeding && cycleDay <= 5) {
+        phase = "Menstruation";
+        statusText = "Typically Low Fertility (Period)";
+        color = "var(--period)";
+        message = `Fertility is typically low during early menstruation, but assume potential fertility if your cycles are short (Day 1-5).`;
+    } else if (isBleeding && cycleDay > 5) {
         phase = "Follicular Phase";
-        statusText = "Pre-Ovulatory";
+        statusText = "Potentially Fertile (Bleeding)";
         color = "var(--unknown)";
-        if (cycleDay !== "-") {
-            message = `Keep logging daily to detect your fertile window opening.`;
+        message = `You are potentially fertile: Late bleeding/spotting occurs closer to ovulation.`;
+    } else {
+        if (!cycleStartKey) {
+            phase = "Unknown Phase";
+            statusText = "Potentially Fertile (Unknown)";
+            color = "var(--unknown)";
+            message = "Insufficient data to determine cycle phase. Please assume you are potentially fertile to be safe.";
+            if (todayData.bleeding === 'none' && todayData.mucus === 'unknown') {
+                message += " Missing mucus data - accuracy may be reduced.";
+            }
+            if (todayData.mucus === 'dry') {
+                message += " Low fertility is only assumed during the evening hours, provided no mucus was detected during any point of the day.";
+            }
         } else {
-            message = `Keep logging daily to detect your fertile window opening.`;
-        }
-        if (todayData.bleeding === 'none' && todayData.mucus === 'unknown') {
-            message += " Missing mucus data - accuracy may be reduced.";
-        }
-        if (todayData.mucus === 'dry') {
-            message += " Low fertility is only assumed during the evening hours, provided no mucus was detected during any point of the day.";
+            phase = "Follicular Phase";
+            statusText = "Potentially Fertile (Pre-Ovulatory)";
+            color = "var(--unknown)";
+            message = `Assume potential fertility. Keep logging daily to detect your fertile window and confirm ovulation.`;
+            
+            if (todayData.bleeding === 'none' && todayData.mucus === 'unknown') {
+                message += " Missing mucus data - accuracy may be reduced.";
+            }
+            if (todayData.mucus === 'dry') {
+                message += " Low fertility is only assumed during the evening hours, provided no mucus was detected during any point of the day.";
+            }
         }
     }
 
